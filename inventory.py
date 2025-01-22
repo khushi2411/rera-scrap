@@ -125,7 +125,7 @@ def extract_outputData(serial_no, input_csv, output_json):
                 if not rows:
                     print(f"No data found for search term '{term}'.")
                     continue
-
+      
                 for row in rows:
                     try:
                         cells = row.find_elements(By.TAG_NAME, 'td')
@@ -133,13 +133,13 @@ def extract_outputData(serial_no, input_csv, output_json):
                             print(f"Row skipped due to insufficient data: {cells}")
                             continue
                         
-                        
-
                         project_data = {
-                            "Rera ID": cells[4].text.strip() if len(cells) > 4 else "N/A",
-                            "Project Name": cells[0].text.strip() if len(cells) > 0 else "N/A",
-                            
+                            "Rera ID": term,
+                            "Project Name": cells[4].text.strip() if len(cells) > 4 else "N/A",   
                         }
+
+                  
+                       
 
                         icon = row.find_element(By.XPATH, './/i[@class="fa fa-files-o" and @style="font-size:30px;color:#3948B1"]')
                         driver.execute_script("arguments[0].scrollIntoView(true);", icon)
@@ -189,106 +189,168 @@ def extract_outputData(serial_no, input_csv, output_json):
                                 driver.back()
                             continue
 
+                    
                         # Extract Inventory Data
-                        inventories = []
-                        print("Processing inventory data...")
-                        inventory_rows = driver.find_elements(By.XPATH, "//table[@class='table table-bordered table-striped table-condensed']/tbody/tr")
-                        for inv_row in inventory_rows:
-                            print(f"Processing row: {inv_row.text}") 
-                            cells = inv_row.find_elements(By.TAG_NAME, 'td')
-                            print(f"Row cells: {[cell.text for cell in cells]}")
-                            if len(cells) >= 6:
-                                inventory_data = {
-                                    "Sl No": cells[0].text.strip(),
-                                    "Type of Inventory": cells[1].text.strip(),
-                                    "No. of Inventory": cells[2].text.strip(),
-                                    "Carpet Area (Sq Mtr)": cells[3].text.strip(),
-                                    "Area of exclusive balcony/verandah (Sq Mtr)": cells[4].text.strip(),
-                                    "Area of exclusive open Terrace (Sq Mtr)": cells[5].text.strip(),
-                                }
+                    
+
+                        # Locate the <h1> element with the specific nested <span>
+                        try:
+                            # Find the <h1> parent element
+                            h1_element = driver.find_element(By.XPATH, "//h1[contains(text(), 'Development') and ./span[text()=' Details ( Bifurcation of Type of Inventories/Flats/Villas )']]")
+                            print("Found the target <h1> element with nested <span>.")
+                            print("Text content of <h1>:", h1_element.text)
+
+                            # Locate the parent wrapper (e.g., inner_wrapper)
+                            wrapper = h1_element.find_element(By.XPATH, "./ancestor::div[contains(@class, 'inner_wrapper')]")
+                            print("Found the parent 'inner_wrapper'.")
+
+                            # Locate the first table inside this wrapper
+                            target_table = wrapper.find_element(By.TAG_NAME, "table")
+                            print("Found the first table inside the target wrapper.")
+
+                            # Extract rows from the table's <tbody>
+                            inventory_rows = target_table.find_elements(By.XPATH,  "//table[@class='table table-bordered table-striped table-condensed']/tbody/tr")
+                        # for tower_row in tower_rows:)
+                            inventories = []
+
+                            for inv_row in inventory_rows:
+                                print(f"Processing row: {inv_row.text}")
+                                cells = inv_row.find_elements(By.TAG_NAME, "td")
+                                print(f"Row cells: {[cell.text for cell in cells]}")
                                 
-                                inventories.append(inventory_data)
-                            else:
-                                print(f"Skipping inventory row due to insufficient cells: {len(cells)}")
-                        project_data["Inventories"] = inventories
+                                 # Check for 'Tower Name' in the first cell and break the loop if found
+                                if len(cells) > 0 and cells[0].text.strip() == "Tower Name":
+                                    print("Encountered 'Tower Name'. Breaking the loop and continuing with the next operation.")
+                                    break 
+
+                                if len(cells) >= 6:
+                                    inventory_data = {
+                                        "Sl No": cells[0].text.strip(),
+                                        "Type of Inventory": cells[1].text.strip(),
+                                        "No. of Inventory": cells[2].text.strip(),
+                                        "Carpet Area (Sq Mtr)": cells[3].text.strip(),
+                                        "Area of exclusive balcony/verandah (Sq Mtr)": cells[4].text.strip(),
+                                        "Area of exclusive open Terrace (Sq Mtr)": cells[5].text.strip(),
+                                    }
+                                  
+                                    inventories.append(inventory_data)
+                                else:
+                                    print(f"Skipping inventory row due to insufficient cells: {len(cells)}")
+
+                            # Store the extracted data
+                            project_data["Inventories"] = inventories
+
+                            # Log the final data
+                            print("Extracted Inventory Data:", project_data)
+
+                        except Exception as e:
+                            print(f"Error: {e}")
+
+
 
                         # # Extract Tower Data
-                        towers = []
-                        print("Processing towers data...")
-                        tower_rows = driver.find_elements(By.XPATH, "//table[@class='table table-bordered table-striped table-condensed']/tbody/tr")
-                        for tower_row in tower_rows:
-                            cells = tower_row.find_elements(By.TAG_NAME, 'td')
-                            if len(cells) >= 8:
-                                tower_data = {
-                                    "Tower Name": cells[0].text.strip(),
-                                    "No. of Floors": cells[1].text.strip(),
-                                    "No. of Stilts": cells[2].text.strip(),
-                                    "No. of Basement": cells[3].text.strip(),
-                                    "Height of the Tower (In Meters)": cells[4].text.strip(),
-                                    "Total No. of Units": cells[5].text.strip(),
-                                    "No. of slab of super structure": cells[6].text.strip(),
-                                    "Total No. of Parking": cells[7].text.strip(),
-                                }
-                                towers.append(tower_data)
+                        # towers = []
+                        # print("Processing towers data...")
+                        # tower_rows = driver.find_elements(By.XPATH, "//table[@class='table table-bordered table-striped table-condensed']/tbody/tr")
+                        # for tower_row in tower_rows:
+                        #     cells = tower_row.find_elements(By.TAG_NAME, 'td')
+                        #     if len(cells) >= 8:
+                        #         tower_data = {
+                        #             "Tower Name": cells[0].text.strip(),
+                        #             "No. of Floors": cells[1].text.strip(),
+                        #             "No. of Stilts": cells[2].text.strip(),
+                        #             "No. of Basement": cells[3].text.strip(),
+                        #             "Height of the Tower (In Meters)": cells[4].text.strip(),
+                        #             "Total No. of Units": cells[5].text.strip(),
+                        #             "No. of slab of super structure": cells[6].text.strip(),
+                        #             "Total No. of Parking": cells[7].text.strip(),
+                        #         }
+                        #         towers.append(tower_data)
                                 
-                        project_data["Towers"] = towers
-                        project_data["Number_of_Towers"] = len(towers)
+                        # project_data["Towers"] = towers
+                        # project_data["Number_of_Towers"] = len(towers)
 
                         #FAR Sanctioned
-                        FAR_Sanctioned = [] 
-                        try:
-                            far_sanctioned = driver.find_element(By.XPATH, '//div[@class="col-md-3 col-sm-6 col-xs-6"]/p').text.strip()
-                            FAR_Sanctioned.append(far_sanctioned)
-                        except NoSuchElementException:
-                            FAR_Sanctioned.append("N/A")
-                            project_data["FAR_Sanctioned"] = FAR_Sanctioned
+                        # FAR_Sanctioned = [] 
+                        # try:
+                        #     far_sanctioned = driver.find_element(By.XPATH, '//div[@class="col-md-3 col-sm-6 col-xs-6"]/p').text.strip()
+                        #     FAR_Sanctioned.append(far_sanctioned)
+                        # except NoSuchElementException:
+                        #     FAR_Sanctioned.append("N/A")
+                        #     project_data["FAR_Sanctioned"] = FAR_Sanctioned
                             
                        # Extract Internal Infrastructure
-                        internal_infrastructure = []
-                        internal_rows = driver.find_elements(By.XPATH, '//h1[contains(text(), "Internal Infrastructure")]/following-sibling::div/following-sibling::table[@class="table table-bordered table-striped table-condensed"]/tbody/tr')
-                        for int_row in internal_rows:
-                            cells = int_row.find_elements(By.TAG_NAME, 'td')
+                       # Initialize variables
+                       # Initialize variables
+                   
+                        current_section = "Internal Infrastructure"
+                        section_data = []
+                        # Find rows in the table
+                        rows = driver.find_elements(By.XPATH, '//h1[contains(text(), "Internal Infrastructure")]/following-sibling::div/following-sibling::table[@class="table table-bordered table-striped table-condensed"]/tbody/tr')
+
+                        # Iterate through rows
+                        for row in rows:
+                            cells = row.find_elements(By.TAG_NAME, 'td')
                             if len(cells) >= 3:
-                                internal_data = {
+                                sl_no = cells[0].text.strip()
+                                
+                                # Check if Sl No is "1" and handle section transition
+                                if sl_no == "1" and section_data:
+                                    # Add the completed section data to the project_data dictionary
+                                    project_data[current_section] = section_data
+                                    section_data = []  # Reset for the next section
                                     
-                                    "Sl No": cells[0].text.strip(),
+                                    # Update the section header dynamically
+                                    if current_section == "Internal Infrastructure":
+                                        current_section = "External Infrastructure"
+                                    elif current_section == "External Infrastructure":
+                                        current_section = "Amenities"
+                                
+                                # Collect row data
+                                row_data = {
+                                    "Sl No": sl_no,
                                     "Work": cells[1].text.strip(),
                                     "Is Applicable": cells[2].text.strip(),
                                 }
+                                section_data.append(row_data)
 
-                                internal_infrastructure.append(internal_data)
-                        project_data["Internal_Infrastructure"] = internal_infrastructure  
+                        # Add the last section data to the project_data
+                        if section_data:
+                            project_data[current_section] = section_data
 
-                        # Extract External Infrastructure
-                        external_infrastructure = []
-                        external_rows = driver.find_elements(By.XPATH, '//h1[contains(text(), "External Infrastructure")]/following-sibling::div/following-sibling::table[@class="table table-bordered table-striped table-condensed"]/tbody/tr')
-                        for ext_row in external_rows:
-                            cells = ext_row.find_elements(By.TAG_NAME, 'td')
-                            if len(cells) >= 3:
-                                external_data = {
-                                    "Sl No": cells[0].text.strip(),
-                                    "Work": cells[1].text.strip(),
-                                    "Is Applicable": cells[2].text.strip(),
-                                }
-                                external_infrastructure.append(external_data)
-                        project_data["External_Infrastructure"] = external_infrastructure
+
+
+
+                        # # Extract External Infrastructure
+                        # external_infrastructure = []
+                        # external_rows = driver.find_elements(By.XPATH, '//h1[contains(text(), "External Infrastructure")]/following-sibling::div/following-sibling::table[@class="table table-bordered table-striped table-condensed"]/tbody/tr')
+                        # for ext_row in external_rows:
+                        #     cells = ext_row.find_elements(By.TAG_NAME, 'td')
+                        #     if len(cells) >= 3:
+                        #         external_data = {
+                        #             "Sl No": cells[0].text.strip(),
+                        #             "Work": cells[1].text.strip(),
+                        #             "Is Applicable": cells[2].text.strip(),
+                        #         }
+                        #         external_infrastructure.append(external_data)
+                        # project_data["External_Infrastructure"] = external_infrastructure
                        
 
-                        # Extract Amenities
-                        amenities = []
-                        print("Processing amenities data...")
-                        amenities_rows = driver.find_elements(By.XPATH, '//h1[contains(text(), "Amenities")]/following-sibling::div/following-sibling::table[@class="table table-bordered table-striped table-condensed"]/tbody/tr')
-                        for amen_row in amenities_rows:
-                            cells = amen_row.find_elements(By.TAG_NAME, 'td')
-                            if len(cells) >= 3:
-                                    # Process the row and append data
-                                    amenities_data = {
-                                        "Sl No": cells[0].text.strip(),
-                                        "Work": cells[1].text.strip(),
-                                        "Is Applicable": cells[2].text.strip(),
-                                        "Area (Sq Mt)": cells[3].text.strip() if len(cells) > 3 else "N/A",}
-                                    amenities.append(amenities_data)
-                                    project_data["Amenities"] = amenities
+                        # # Extract Amenities
+                        # amenities = []
+                        # print("Processing amenities data...")
+                        # amenities_rows = driver.find_elements(By.XPATH, '//h1[contains(text(), "Amenities")]/following-sibling::div/following-sibling::table[@class="table table-bordered table-striped table-condensed"]/tbody/tr')
+                        # for amen_row in amenities_rows:
+                            # cells = amen_row.find_elements(By.TAG_NAME, 'td')
+                            # if len(cells) >= 3:
+                            #         # Process the row and append data
+                            #         amenities_data = {
+                            #             "Sl No": cells[0].text.strip(),
+                            #             "Work": cells[1].text.strip(),
+                            #             "Is Applicable": cells[2].text.strip(),
+                            #             "Area (Sq Mt)": cells[3].text.strip() if len(cells) > 3 else "N/A",}
+                            #         amenities.append(amenities_data)
+                            #         project_data["Amenities"] = amenities
 
                         outputData.append(project_data)
 
